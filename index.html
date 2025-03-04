@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenFlow - Your Personal Yoga Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neo-bg: #e0e5ec;
+            --neo-shadow-dark: #a3b1c6;
+            --neo-shadow-light: #ffffff;
+            --accent: #6B8E23;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--neo-bg);
+        }
+
+        .neo-card {
+            border-radius: 20px;
+            background: var(--neo-bg);
+            box-shadow: 8px 8px 16px var(--neo-shadow-dark),
+                       -8px -8px 16px var(--neo-shadow-light);
+            transition: transform 0.3s ease;
+        }
+
+        .neo-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .neo-button {
+            border-radius: 10px;
+            background: var(--neo-bg);
+            box-shadow: 5px 5px 10px var(--neo-shadow-dark),
+                       -5px -5px 10px var(--neo-shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        .neo-button:active {
+            box-shadow: inset 5px 5px 10px var(--neo-shadow-dark),
+                       inset -5px -5px 10px var(--neo-shadow-light);
+        }
+
+        .timer-display {
+            font-size: 3rem;
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .timer-display {
+                font-size: 2rem;
+            }
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <nav class="neo-card p-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-semibold text-gray-700">ZenFlow</h1>
+            <button class="neo-button p-3" id="notificationBtn">
+                <i class="bi bi-bell"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Yoga Poses Section -->
+            <div class="neo-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Today's Poses</h2>
+                <div class="space-y-4" id="posesList">
+                    <!-- Poses will be populated here -->
+                </div>
+            </div>
+
+            <!-- Timer Section -->
+            <div class="neo-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Practice Timer</h2>
+                <div class="flex flex-col items-center">
+                    <div class="timer-display" id="timer">05:00</div>
+                    <div class="flex gap-4 mt-4">
+                        <button class="neo-button px-6 py-2" id="startTimer">Start</button>
+                        <button class="neo-button px-6 py-2" id="resetTimer">Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meditation Mode -->
+            <div class="neo-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Meditation Mode</h2>
+                <div class="flex flex-col items-center">
+                    <button class="neo-button p-4 mb-4" id="toggleMeditation">
+                        <i class="bi bi-peace text-2xl"></i>
+                    </button>
+                    <audio id="meditationAudio" src="https://assets.mixkit.co/music/preview/mixkit-meditation-river-123.mp3"></audio>
+                    <div class="text-sm text-gray-600 mt-2">Click to start guided meditation</div>
+                </div>
+            </div>
+
+            <!-- Progress Tracking -->
+            <div class="neo-card p-6">
+                <h2 class="text-xl font-semibold mb-4">Your Progress</h2>
+                <div class="flex justify-center">
+                    <svg width="150" height="150" class="progress-ring">
+                        <circle id="progressRing" cx="75" cy="75" r="60" stroke="#6B8E23" stroke-width="10" fill="transparent"/>
+                    </svg>
+                </div>
+                <div class="text-center mt-4">
+                    <span id="progressText">4/7 days completed</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample yoga poses data
+        const poses = [
+            { name: 'Mountain Pose', duration: '1 min', image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=300' },
+            { name: 'Tree Pose', duration: '2 min', image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=300' },
+            { name: 'Warrior I', duration: '2 min', image: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&w=300' }
+        ];
+
+        // Populate poses
+        const posesList = document.getElementById('posesList');
+        poses.forEach(pose => {
+            const poseElement = document.createElement('div');
+            poseElement.className = 'flex items-center space-x-4 neo-button p-3';
+            poseElement.innerHTML = `
+                <img src="${pose.image}" class="w-16 h-16 object-cover rounded" alt="${pose.name}">
+                <div>
+                    <h3 class="font-medium">${pose.name}</h3>
+                    <p class="text-sm text-gray-600">${pose.duration}</p>
+                </div>
+            `;
+            posesList.appendChild(poseElement);
+        });
+
+        // Timer functionality
+        let timeLeft = 300; // 5 minutes in seconds
+        let timerInterval;
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startTimer');
+        const resetBtn = document.getElementById('resetTimer');
+
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (startBtn.textContent === 'Start') {
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimer();
+                    if (timeLeft === 0) {
+                        clearInterval(timerInterval);
+                        startBtn.textContent = 'Start';
+                    }
+                }, 1000);
+                startBtn.textContent = 'Pause';
+            } else {
+                clearInterval(timerInterval);
+                startBtn.textContent = 'Start';
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            timeLeft = 300;
+            updateTimer();
+            startBtn.textContent = 'Start';
+        });
+
+        // Meditation mode
+        const toggleMeditation = document.getElementById('toggleMeditation');
+        const meditationAudio = document.getElementById('meditationAudio');
+        let isMeditating = false;
+
+        toggleMeditation.addEventListener('click', () => {
+            if (!isMeditating) {
+                meditationAudio.play();
+                toggleMeditation.innerHTML = '<i class="bi bi-pause-circle text-2xl"></i>';
+            } else {
+                meditationAudio.pause();
+                meditationAudio.currentTime = 0;
+                toggleMeditation.innerHTML = '<i class="bi bi-peace text-2xl"></i>';
+            }
+            isMeditating = !isMeditating;
+        });
+
+        // Progress ring animation
+        const progressRing = document.getElementById('progressRing');
+        const circumference = 2 * Math.PI * 60;
+        progressRing.style.strokeDasharray = circumference;
+        progressRing.style.strokeDashoffset = circumference * (1 - 4/7);
+
+        // Notifications
+        document.getElementById('notificationBtn').addEventListener('click', () => {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Yoga Reminder', {
+                            body: 'Time for your daily yoga practice!',
+                            icon: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=100'
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
